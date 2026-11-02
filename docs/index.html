@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Token Meter – Claude Code usage in your menu bar</title>
+  <meta name="description" content="A tiny macOS menu bar app that shows how much of your Claude Code usage limits you've used, and when they reset.">
+  <style>
+    :root {
+      --bg: #0f1115;
+      --card: #181b22;
+      --text: #e8eaf0;
+      --muted: #9aa3b2;
+      --accent: #4f8cff;
+      --border: #272c36;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 17px/1.6 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+    }
+    main { max-width: 880px; margin: 0 auto; padding: 72px 24px 48px; }
+    .hero { display: grid; gap: 40px; grid-template-columns: 1.1fr 1fr; align-items: center; }
+    h1 { font-size: clamp(2.2rem, 5vw, 3.2rem); line-height: 1.1; margin: 0 0 16px; letter-spacing: -0.02em; }
+    .lede { color: var(--muted); margin: 0 0 28px; }
+    .buttons { display: flex; gap: 12px; flex-wrap: wrap; }
+    a.btn {
+      display: inline-block; padding: 11px 20px; border-radius: 10px;
+      text-decoration: none; font-weight: 600; border: 1px solid var(--border);
+      color: var(--text); background: var(--card);
+    }
+    a.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    a.btn:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+    .shot { width: 100%; height: auto; border-radius: 16px; }
+    section { margin-top: 72px; }
+    h2 { font-size: 1.5rem; margin: 0 0 20px; letter-spacing: -0.01em; }
+    .features { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 20px; }
+    .card h3 { margin: 0 0 6px; font-size: 1.05rem; }
+    .card p { margin: 0; color: var(--muted); font-size: 0.95rem; }
+    ol { padding-left: 1.2em; }
+    li { margin-bottom: 8px; }
+    code { background: var(--card); border: 1px solid var(--border); padding: 2px 6px; border-radius: 6px; font-size: 0.9em; }
+    .note { color: var(--muted); font-size: 0.9rem; }
+    footer { margin-top: 72px; padding-top: 24px; border-top: 1px solid var(--border); color: var(--muted); font-size: 0.9rem; }
+    footer a { color: var(--accent); }
+    @media (max-width: 720px) { .hero { grid-template-columns: 1fr; } main { padding-top: 40px; } }
+  </style>
+</head>
+<body>
+<main>
+  <div class="hero">
+    <div>
+      <h1>Token Meter</h1>
+      <p class="lede">See how much of your Claude Code usage you've used, and when it resets, right from your Mac's menu bar.</p>
+      <div class="buttons">
+        <a class="btn primary" href="https://github.com/sjvandy/token-meter">View on GitHub</a>
+        <a class="btn" href="#install">How to install</a>
+      </div>
+    </div>
+    <img class="shot" src="screenshot.png" alt="The Token Meter popover showing 5% of the 5-hour session used and 38% of the weekly limit, with reset times.">
+  </div>
+
+  <section>
+    <h2>What you get</h2>
+    <div class="features">
+      <div class="card"><h3>Always visible</h3><p>Your current 5-hour session percentage sits in the menu bar. No Dock icon, no window.</p></div>
+      <div class="card"><h3>Session and weekly</h3><p>Progress bars turn orange above 75% and red above 90%, each with a reset countdown.</p></div>
+      <div class="card"><h3>Stays fresh</h3><p>Refreshes every 60 seconds, and matches what Claude Code's <code>/usage</code> shows.</p></div>
+      <div class="card"><h3>Terminal or Xcode</h3><p>Reads both the CLI login and Claude in Xcode's login, and uses whichever is still valid.</p></div>
+    </div>
+  </section>
+
+  <section id="install">
+    <h2>Install</h2>
+    <ol>
+      <li>Clone the repo and open <code>Token Meter.xcodeproj</code> in Xcode.</li>
+      <li>Press <strong>Run</strong>.</li>
+      <li>When macOS asks for Keychain access to Claude Code's credentials, choose <strong>Always Allow</strong>.</li>
+    </ol>
+    <p class="note">Requires macOS 27, Xcode, and a Claude Code login on this Mac. There's no signed download yet.</p>
+  </section>
+
+  <section>
+    <h2>Privacy</h2>
+    <p>Your login token is read from the macOS Keychain, sent only to <code>api.anthropic.com</code>, and never written to disk or logged. Token Meter has no analytics and no servers of its own. The source is on GitHub, so you can check.</p>
+  </section>
+
+  <footer>
+    <p>Token Meter is an independent, unofficial project and isn't affiliated with or endorsed by Anthropic. It uses an undocumented usage endpoint that may change without notice.</p>
+    <p>MIT licensed · <a href="https://github.com/sjvandy/token-meter">Source on GitHub</a></p>
+  </footer>
+</main>
+</body>
+</html>

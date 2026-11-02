@@ -48,8 +48,21 @@ nonisolated enum UsageService {
     private static let usageURL = URL(string: "https://api.anthropic.com/api/oauth/usage")!
 
     static func fetch() async throws -> UsageSnapshot {
-        let token = try await readAccessToken()
+        // The terminal CLI and Xcode's agent keep separate logins, and each only refreshes
+        // its own. Try the freshest token first and fall back if it's rejected.
+        let tokens = try await readAccessTokens()
+        var lastError = UsageError.unauthorized
+        for token in tokens {
+            do {
+                return try await fetch(token: token)
+            } catch UsageError.unauthorized {
+                lastError = .unauthorized
+            }
+        }
+        throw lastError
+    }
 
+    private static func fetch(token: String) async throws -> UsageSnapshot {
         var request = URLRequest(url: usageURL, timeoutInterval: 15)
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.setValue("oauth-2025-04-20", forHTTPHeaderField: "anthropic-beta")
@@ -91,20 +104,42 @@ nonisolated enum UsageService {
 
     /// Keychain reads can block on the access prompt, so keep them off the main actor.
     @concurrent
-    private static func readAccessToken() async throws -> String {
-        let query: [String: Any] = [
+    private static func readAccessTokens() async throws -> [String] {
+        // Listing attributes only doesn't touch secrets, so it doesn't prompt.
+        let listQuery: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: keychainService,
-            kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne
+            kSecReturnAttributes as String: true,
+            kSecMatchLimit as String: kSecMatchLimitAll
         ]
-        var item: CFTypeRef?
-        guard SecItemCopyMatching(query as CFDictionary, &item) == errSecSuccess,
-              let data = item as? Data,
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let oauth = json["claudeAiOauth"] as? [String: Any],
-              let token = oauth["accessToken"] as? String
+        var listed: CFTypeRef?
+        guard SecItemCopyMatching(listQuery as CFDictionary, &listed) == errSecSuccess,
+              let items = listed as? [[String: Any]]
         else { throw UsageError.noCredentials }
-        return token
+
+        // Matches "Claude Code-credentials" plus suffixed variants such as
+        // "Claude Code-credentials-d1f7f4ad" (a different CLAUDE_CONFIG_DIR).
+        let services = Set(items.compactMap { $0[kSecAttrService as String] as? String }
+            .filter { $0.hasPrefix(keychainService) })
+
+        var candidates: [(token: String, expiresAt: Double)] = []
+        for service in services {
+            let query: [String: Any] = [
+                kSecClass as String: kSecClassGenericPassword,
+                kSecAttrService as String: service,
+                kSecReturnData as String: true,
+                kSecMatchLimit as String: kSecMatchLimitOne
+            ]
+            var item: CFTypeRef?
+            guard SecItemCopyMatching(query as CFDictionary, &item) == errSecSuccess,
+                  let data = item as? Data,
+                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let oauth = json["claudeAiOauth"] as? [String: Any],
+                  let token = oauth["accessToken"] as? String
+            else { continue }
+            candidates.append((token, oauth["expiresAt"] as? Double ?? 0))
+        }
+
+        guard !candidates.isEmpty else { throw UsageError.noCredentials }
+        return candidates.sorted { $0.expiresAt > $1.expiresAt }.map(\.token)
     }
 }
